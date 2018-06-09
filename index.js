@@ -10,105 +10,103 @@ function getDistance(x1, y1, x2, y2) {
 
 //Components
 var x = 0;
-var swing = 0.2;
-var acceleration = 0;
-var velocity = 0;
-var position = 0;
+var swing = 0.5; 
+var acceleration = [-swing];
+var velocity = [0];
+var position = [0];
+var integral = [0];
 var gameOver = false;
-var total = 0;
+var active = false;
 
-//Layers
-var accelerationLayer = document.createElement('canvas');
-var actx = accelerationLayer.getContext('2d');
-var velocityLayer = document.createElement('canvas');
-var vctx = velocityLayer.getContext('2d');
-var positionLayer = document.createElement('canvas');
-var pctx = positionLayer.getContext('2d');
+var family = [];
+var level = 3;
+for(var i=0;i<level;i++) {
+  family.push([0]);
+}
 
 function resize() {
-  canvas.width = accelerationLayer.width = velocityLayer.width = positionLayer.width = window.innerWidth;
-  canvas.height = accelerationLayer.height = velocityLayer.height = positionLayer.height = window.innerHeight;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 }
 window.addEventListener('resize', resize);
 resize();
 
-function update() {
-  if(acceleration !== 0) {
-    x += canvas.width / 1000;
-    velocity += acceleration;
-    position += velocity;
-    total += position * position;
+var baseResolution = 1;
+var resolution = 1;
+var scale = 1;
+var targetScale = 1;
+var max = 0; 
+var extrema = [];
+function update(delta) {
+  x+=delta*resolution;
+  if(family.length > 1) {
+    family[0].push(active ? swing : -swing);
+    for(var i=1;i<family.length;i++) {
+      var newVal = family[i][family[i].length - 1] + family[i-1][family[i-1].length - 1];
+      if(Math.abs(newVal) < 0.25 && i === family.length - 2) {
+        console.log(newVal);
+        extrema.push(family[i].length);
+      }
+      family[i].push(newVal);
+    }
   }
-  if (x > canvas.width) {
-    gameOver = true;
+  var last = family[family.length-1]; 
+  max = Math.abs(last[last.length - 1]);
+  for(var i=extrema.length-1;i>0&&i>extrema.length-6;i--) {
+    if(Math.abs(last[extrema[i]]) > max) {
+      max = Math.abs(last[extrema[i]]);
+    }
   }
+  targetScale = (canvas.height/3)/max;
+  if(targetScale > 10) {
+    targetScale = 10;
+  }
+
+  scale += (targetScale - scale)/20;
+
+  resolution = baseResolution * scale;
+
 }
 
 function render() {
-  // ctx.fillStyle = "rgba(" + (getDistance(x, position, x, 0) / canvas.height / 2) * 255 + ",0,0)";
-  // ctx.fillRect(x - 1, canvas.height / 2 - position / 10 - 1, 3, 3);
-  // ctx.fillStyle = "rgba(0,0,0,0.5)";
-  // ctx.fillRect(x, canvas.height / 2 - velocity, 1, 1);
-  // ctx.fillRect(x, canvas.height / 2 - acceleration * canvas.height / 4, 1, 1);
-  // ctx.fillStyle = "rgba(0,255,0," + Math.round((x % 15) / 15) + ")";
-  // ctx.fillRect(x - 1, canvas.height / 2 - 1, 3, 3);
-  //Draw acceleration
-  actx.clearRect(0,0,canvas.width,canvas.height);
-  actx.beginPath();
-  actx.moveTo(x,canvas.height / 2 - acceleration * 40 - 1);
-  actx.lineTo(x,canvas.height / 2 - acceleration * 40 + 1);
-  actx.strokeStyle = "#444";
-  actx.stroke();
-  ctx.drawImage(accelerationLayer,0,0);
-  //Draw velocity
-  vctx.clearRect(0,0,canvas.width,canvas.height);
-  vctx.beginPath();
-  vctx.moveTo(x,canvas.height / 2 - velocity * 10 - 2);
-  vctx.lineTo(x,canvas.height / 2 - velocity * 10 + 2);
-  vctx.strokeStyle = "#888";
-  vctx.stroke();
-  ctx.drawImage(velocityLayer,0,0);
-  //Draw position
-  pctx.clearRect(0,0,canvas.width,canvas.height);
-  pctx.beginPath();
-  pctx.moveTo(x,canvas.height / 2 - position - 5);
-  pctx.lineTo(x,canvas.height / 2 - position + 5);
-  var rightness = 1 - Math.abs(position/(canvas.height/2));
-  pctx.strokeStyle = "rgba(255," + rightness * 255 + "," + rightness * 255 + ")";
-  pctx.stroke();
-  ctx.drawImage(positionLayer,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save();
+  ctx.translate(-family[0].length * resolution + canvas.width/2,canvas.height/2);
+  //Draw center line
   ctx.beginPath();
-  ctx.moveTo(x-canvas.height/1000,canvas.height/2);
-  ctx.lineTo(x,canvas.height/2);
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = "#0f0";
+  ctx.moveTo(family[0].length * resolution - canvas.width/2,0);
+  ctx.lineTo(family[0].length * resolution + canvas.width/2,0);
+  ctx.strokeStyle = "#0f0"; 
   ctx.stroke();
-}
-var progress = 0;
-var go = false;
-
-function delay() {
-  console.log(total / (Math.pow(1000, 2)));
-  if (go) {
-    ctx.fillStyle = "rgba(0,255,0,0.25)";
-    ctx.fillRect(progress, 0, canvas.width / 100, canvas.height);
-    progress += canvas.width / 100;
+  for(var i=0;i<family.length;i++) {
+    ctx.beginPath();
+    for(var j=1;j<family[i].length&&j<canvas.width/2/resolution;j++) {
+      ctx.lineTo((family[i].length-j)*resolution,-family[i][family[i].length - j]*scale);
+    }
+    ctx.strokeStyle = "rgba(255,255,255," + (i+1)/(family.length) + ")";
+    ctx.lineWidth = (i+1)/(family.length )*3;
+    ctx.stroke();
   }
-  if (progress > canvas.width) {
-    x = 0;
-    position = 0;
-    velocity = 0;
-    acceleration = -swing;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    gameOver = false;
-    progress = 0;
-    go = false;
-  }
+  ctx.restore();
 }
-
+var now = 0;
+var then = 0;
+var lastUpdate = 0;
+var frames = 0;
+var fps = 0;
+var step = 0;
+var targetStep = 1000/60;
 function loop() {
+  then = now;
+  now = Date.now();
+  frames++;
+  if(now - lastUpdate > 1000) {
+    lastUpdate = now;
+    fps = frames;
+    frames = 0;
+  }
+  update((now - then)/targetStep);
   if (!gameOver) {
-    update();
     render();
   } else {
     delay();
@@ -116,31 +114,21 @@ function loop() {
   window.requestAnimationFrame(loop);
 };
 loop();
-function pointerDown() {
-  if (gameOver) {
-    go = true;
-  } else {
-    acceleration = swing;
-  }
+
+//Controls of all kinds
+function controlDown() {
+  active = true;
 }
-function pointerUp() {
-  if (gameOver) {
-    go = false;
-  } else {
-    acceleration = -swing;
-  }
+function controlUp() {
+  active = false;
 }
-window.addEventListener('mousedown', pointerDown);
-window.addEventListener('mouseup', pointerUp);
+window.addEventListener('mousedown', controlDown);
+window.addEventListener('mouseup', controlUp);
 window.addEventListener('keydown',function(e) {
   if(e.which === 32) {
-    pointerDown();
+    controlDown();
   }
 });
-window.addEventListener('keyup',function(e) {
-  if(e.which === 32) {
-    pointerUp();
-  }
-});
-window.addEventListener('touchstart',pointerDown);
-window.addEventListener('touchend',pointerUp);
+window.addEventListener('keyup',controlUp  );
+window.addEventListener('touchstart',controlDown);
+window.addEventListener('touchend',controlUp);
