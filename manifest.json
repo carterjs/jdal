@@ -1,0 +1,9 @@
+{
+    "name": "Just Draw A Line",
+    "short_name" : "JDAL",
+    "start_url": "index.html",
+    "scope" : "./",
+    "theme_color": "#fff",
+    "background_color": "#000",
+    "display": "standalone"
+}
