@@ -1,3 +1,16 @@
+//Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', {
+      scope: '.' // <--- THIS BIT IS REQUIRED
+  }).then(function(registration) {
+      // Registration was successful
+      console.log('ServiceWorker registration successful with scope: ', registration.scope);
+  }, function(err) {
+      // registration failed :(
+      console.log('ServiceWorker registration failed: ', err);
+  });
+}
+
 //Set up
 var canvas = document.getElementById('canvas');
 var image = document.createElement('canvas');
@@ -19,8 +32,8 @@ var gameOver = false;
 var active = false;
 
 var family = [];
-var level = 3;
-for(var i=0;i<level;i++) {
+var depth = 3;
+for(var i=0;i<depth;i++) {
   family.push([0]);
 }
 
@@ -43,8 +56,7 @@ function update(delta) {
     family[0].push(active ? swing : -swing);
     for(var i=1;i<family.length;i++) {
       var newVal = family[i][family[i].length - 1] + family[i-1][family[i-1].length - 1];
-      if(Math.abs(newVal) < 0.25 && i === family.length - 2) {
-        console.log(newVal);
+      if(Math.abs(newVal) < 0.1 && i === family.length - 2) {
         extrema.push(family[i].length);
       }
       family[i].push(newVal);
