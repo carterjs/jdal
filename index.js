@@ -24,14 +24,15 @@ for(var i=0;i<depth;i++) {
   family.push([0]);
 }
 
+var baseResolution = 1;
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  baseResolution = canvas.width/1000;
 }
 window.addEventListener('resize', resize);
 resize();
 
-var baseResolution = 1;
 var resolution = 1;
 var scale = 1;
 var targetScale = 1;
@@ -61,7 +62,7 @@ function update(delta) {
     targetScale = 10;
   }
 
-  scale += (targetScale - scale)/20;
+  scale += (targetScale - scale)/10;
 
   resolution = baseResolution * scale;
 
