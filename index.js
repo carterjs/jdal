@@ -37,30 +37,39 @@ var resolution = 1;
 var scale = 1;
 var targetScale = 1;
 var max = 0; 
-var extrema = [];
-var targets = [];
-for(var i=0;i<100;i++) {
-  targets.push({
-    position: i*250,
-    width: Math.round(Math.random()*50)+50,
-    color: "rgb(" + Math.round(Math.random()*200 + 55) + "," + Math.round(Math.random()*200 + 55) + "," + Math.round(Math.random()*200 + 55) + ")",
-    opacity: 0
-  });
-}
+var maxima = [];
+var minima = [];
+var zeros = [];
+var pois = [];
 function update(delta) {
   x+=delta*resolution;
   if(family.length > 1) {
     family[0].push(active ? swing : -swing);
+    if((family[0][family[0].length - 1] < 0) !== (family[0][family[0].length - 2] < 0)) {
+      //Second derivative hit 0
+      pois.push(family[0].length);
+    }
     for(var i=1;i<family.length;i++) {
       var newVal = family[i][family[i].length - 1] + family[i-1][family[i-1].length - 1];
-      if(Math.abs(newVal) < 0.1 && i === family.length - 2) {
-        extrema.push(family[i].length);
+      if(i === family.length - 1 && (((family[i][family[i].length - 1] < 0) !== (newVal < 0)))) {
+        //Base function hit 0
+        zeros.push(family[i].length);
       }
+      if(i === family.length - 2 && (((family[i][family[i].length - 1] < 0) !== (newVal < 0)))) {
+        //First derivative hit 0
+        if(active) {
+          minima.push(family[i].length);
+        } else {
+          maxima.push(family[i].length);
+        }
+      }
+      console.log(pois);
       family[i].push(newVal);
     }
   }
   var last = family[family.length-1]; 
   max = Math.abs(last[last.length - 1]);
+  var extrema = maxima.concat(minima);
   for(var i=extrema.length-1;i>0&&i>extrema.length-6;i--) {
     if(Math.abs(last[extrema[i]]) > max) {
       max = Math.abs(last[extrema[i]]);
@@ -81,34 +90,6 @@ function render() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.save();
   ctx.translate(-family[0].length * resolution + canvas.width/2,canvas.height/2);
-  //Draw targets
-  for(var i=0;i<targets.length;i++) {
-    if(targets[i].position * resolution - family[0].length * resolution < canvas.width/2) {
-      if(targets[i].position * resolution - family[0].length * resolution + targets[i].width * resolution> 0) {
-        if(targets[i].opacity === 0) {
-          targets[i].opacity = 0.1;
-        }
-        if(targets[i].opacity < 0.9) {
-          targets[i].opacity *= 1.1;
-        }
-        ctx.globalAlpha = targets[i].opacity;
-        ctx.fillStyle = targets[i].color;
-        ctx.fillRect(targets[i].position * resolution,-canvas.height/2,targets[i].width * resolution,canvas.height);
-        ctx.globalAlpha = 1;
-        break;
-      } else {
-        if(targets[i].opacity > 0.05) {
-          targets[i].opacity *= 0.9;
-          ctx.fillStyle = ctx.fillStyle = targets[i].color;
-          ctx.globalAlpha = targets[i].opacity;
-          ctx.fillRect(targets[i].position * resolution,-canvas.height/2,targets[i].width * resolution,canvas.height);
-          ctx.globalAlpha = 1;
-        }
-      }
-    } else {
-      break; 
-    }
-  }
   //Draw center line
   ctx.beginPath();
   ctx.moveTo(family[0].length * resolution - canvas.width/2,0);
