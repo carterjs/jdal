@@ -43,7 +43,8 @@ for(var i=0;i<100;i++) {
   targets.push({
     position: i*250,
     width: Math.round(Math.random()*50)+50,
-    color: "rgba(" + Math.round(Math.random()*200 + 55) + "," + Math.round(Math.random()*200 + 55) + "," + Math.round(Math.random()*200 + 55) + ",0.5)"
+    color: "rgb(" + Math.round(Math.random()*200 + 55) + "," + Math.round(Math.random()*200 + 55) + "," + Math.round(Math.random()*200 + 55) + ")",
+    opacity: 0
   });
 }
 function update(delta) {
@@ -83,16 +84,30 @@ function render() {
   //Draw targets
   for(var i=0;i<targets.length;i++) {
     if(targets[i].position * resolution - family[0].length * resolution < canvas.width/2) {
-      ctx.beginPath();
-      ctx.rect(targets[i].position * resolution,-canvas.height/2,targets[i].width*resolution,canvas.height);
-      ctx.globalAlpha = Math.min(Math.abs(targets[i].position * resolution - family[0].length * resolution + targets[i].width * resolution)/(canvas.width/2),1);
-      ctx.fillStyle = targets[i].color;
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      if(targets[i].position * resolution - family[0].length * resolution + targets[i].width * resolution> 0) {
+        if(targets[i].opacity === 0) {
+          targets[i].opacity = 0.1;
+        }
+        if(targets[i].opacity < 0.9) {
+          targets[i].opacity *= 1.1;
+        }
+        ctx.globalAlpha = targets[i].opacity;
+        ctx.fillStyle = targets[i].color;
+        ctx.fillRect(targets[i].position * resolution,-canvas.height/2,targets[i].width * resolution,canvas.height);
+        ctx.globalAlpha = 1;
+        break;
+      } else {
+        if(targets[i].opacity > 0.05) {
+          targets[i].opacity *= 0.9;
+          ctx.fillStyle = ctx.fillStyle = targets[i].color;
+          ctx.globalAlpha = targets[i].opacity;
+          ctx.fillRect(targets[i].position * resolution,-canvas.height/2,targets[i].width * resolution,canvas.height);
+          ctx.globalAlpha = 1;
+        }
+      }
     } else {
       break; 
     }
-
   }
   //Draw center line
   ctx.beginPath();
