@@ -38,6 +38,14 @@ var scale = 1;
 var targetScale = 1;
 var max = 0; 
 var extrema = [];
+var targets = [];
+for(var i=0;i<100;i++) {
+  targets.push({
+    position: i*250,
+    width: Math.round(Math.random()*50)+50,
+    color: "rgba(" + Math.round(Math.random()*200 + 55) + "," + Math.round(Math.random()*200 + 55) + "," + Math.round(Math.random()*200 + 55) + ",0.5)"
+  });
+}
 function update(delta) {
   x+=delta*resolution;
   if(family.length > 1) {
@@ -72,6 +80,20 @@ function render() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.save();
   ctx.translate(-family[0].length * resolution + canvas.width/2,canvas.height/2);
+  //Draw targets
+  for(var i=0;i<targets.length;i++) {
+    if(targets[i].position * resolution - family[0].length * resolution < canvas.width/2) {
+      ctx.beginPath();
+      ctx.rect(targets[i].position * resolution,-canvas.height/2,targets[i].width*resolution,canvas.height);
+      ctx.globalAlpha = Math.min(Math.abs(targets[i].position * resolution - family[0].length * resolution + targets[i].width * resolution)/(canvas.width/2),1);
+      ctx.fillStyle = targets[i].color;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else {
+      break; 
+    }
+
+  }
   //Draw center line
   ctx.beginPath();
   ctx.moveTo(family[0].length * resolution - canvas.width/2,0);
