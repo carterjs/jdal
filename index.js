@@ -41,32 +41,76 @@ var maxima = [];
 var minima = [];
 var zeros = [];
 var pois = [];
+var gameOver = false;
+var score = -1;
+var types = ['max','min','zero','poi']
+var target = {
+  min: 250,
+  max: 300,
+  display: {
+    min: 1000,
+    max: 1000
+  },
+  type: 'poi',
+  completed: false
+};
+function updateTarget() {
+  target.min = target.max + Math.round(Math.random() * 50);
+  target.max = target.min + Math.round(Math.random() * 30 + 20);
+  target.completed = false;
+  target.type = types[Math.round(Math.random()*3)];
+  target.color = "rgb(" + Math.round(30 + Math.random()*100) + "," + Math.round(30 + Math.random()*100) + "," + Math.round(30 + Math.random()*100) + ")";
+  score++;
+}
+updateTarget();
 function update(delta) {
   x+=delta*resolution;
+  //Update values
   if(family.length > 1) {
     family[0].push(active ? swing : -swing);
-    if((family[0][family[0].length - 1] < 0) !== (family[0][family[0].length - 2] < 0)) {
+    //Check if target has expired
+    if(family[0].length > target.max) {
+      gameOver = true;
+    }
+    var type = null;
+    if(family[0][family[0].length - 1] !== family[0][family[0].length - 2]) {
       //Second derivative hit 0
       pois.push(family[0].length);
+      type = "poi";
     }
     for(var i=1;i<family.length;i++) {
       var newVal = family[i][family[i].length - 1] + family[i-1][family[i-1].length - 1];
       if(i === family.length - 1 && (((family[i][family[i].length - 1] < 0) !== (newVal < 0)))) {
         //Base function hit 0
-        zeros.push(family[i].length);
+        zeros.push(family[i].length-1);
+        type = "zero";
       }
       if(i === family.length - 2 && (((family[i][family[i].length - 1] < 0) !== (newVal < 0)))) {
         //First derivative hit 0
-        if(active) {
+        if(family[0][family[0].length - 1] > 0) {
           minima.push(family[i].length);
+          type = "min";
         } else {
           maxima.push(family[i].length);
+          type = "max";
         }
       }
-      console.log(pois);
+      if(!!type && family[0].length > target.min && family[0].length < target.max) {
+        if(type == target.type) {
+          if(target.completed) {
+            gameOver = true;
+          } else {
+            updateTarget();
+          }
+        }
+      }
       family[i].push(newVal);
     }
   }
+  //Move the displayed target
+  target.display.min += (target.min - target.display.min)/10;
+  target.display.max += (target.max - target.display.max)/10;
+  //Calculate scale
   var last = family[family.length-1]; 
   max = Math.abs(last[last.length - 1]);
   var extrema = maxima.concat(minima);
@@ -79,9 +123,10 @@ function update(delta) {
   if(targetScale > 10) {
     targetScale = 10;
   }
-
+  //Move toward target scale
   scale += (targetScale - scale)/10;
 
+  //Scale horizontally as well
   resolution = baseResolution * scale;
 
 }
@@ -89,19 +134,36 @@ function update(delta) {
 function render() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.save();
+  var barHeight = canvas.height/20;
+  //Draw data bars
+  ctx.fillStyle = "#ff0";
+  ctx.fillRect(0,0,canvas.width,barHeight);
+  ctx.fillRect(0,canvas.height-barHeight,canvas.width,barHeight);
+  //Move view
   ctx.translate(-family[0].length * resolution + canvas.width/2,canvas.height/2);
+  //Draw target area
+  ctx.fillStyle = target.color;
+  ctx.fillRect(target.display.min*resolution,barHeight-canvas.height/2,(target.display.max-target.display.min)*resolution,canvas.height-2*barHeight);
+  //Draw target type
+  var center = (target.min+(target.display.max-target.display.min)/2) * resolution;
+  ctx.font = Math.round(barHeight*0.8) + "px Impact,sans-serif";
+  ctx.fillStyle = "#000";
+  ctx.textAlign = "center";
+  ctx.fillText(target.type,center,0.8*barHeight-canvas.height/2);
+  //Draw next score
+  ctx.fillText(score+1,center,canvas.height/2-0.2*barHeight);
   //Draw center line
   ctx.beginPath();
   ctx.moveTo(family[0].length * resolution - canvas.width/2,0);
   ctx.lineTo(family[0].length * resolution + canvas.width/2,0);
-  ctx.strokeStyle = "#0f0"; 
+  ctx.strokeStyle = "#fff"; 
   ctx.stroke();
   for(var i=0;i<family.length;i++) {
     ctx.beginPath();
     for(var j=1;j<family[i].length&&j<canvas.width/2/resolution;j++) {
       ctx.lineTo((family[i].length-j)*resolution,-family[i][family[i].length - j]*scale);
     }
-    ctx.strokeStyle = "rgba(255,255,255," + (i+1)/(family.length) + ")";
+    ctx.strokeStyle = "rgba(255,255,0," + (i+1)/(family.length) + ")";
     ctx.lineWidth = (i+1)/(family.length )*3;
     ctx.stroke();
   }
@@ -123,12 +185,12 @@ function loop() {
     fps = frames;
     frames = 0;
   }
-  update((now - then)/targetStep);
-  if (!gameOver) {
-    render();
+  if(!gameOver) {
+    update((now - then)/targetStep);
   } else {
-    delay();
+    console.log("Game over");
   }
+  render();
   window.requestAnimationFrame(loop);
 };
 loop();
