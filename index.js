@@ -9,20 +9,19 @@ function getDistance(x1, y1, x2, y2) {
 }
 
 //Components
-var x = 0;
 var swing = 0.5; 
-var acceleration = [-swing];
-var velocity = [0];
-var position = [0];
-var integral = [0];
 var gameOver = false;
 var active = false;
 
-var family = [];
+var family;
 var depth = 3;
-for(var i=0;i<depth;i++) {
-  family.push([0]);
+function init() {
+  family = [];
+  for(var i=0;i<depth;i++) {
+    family.push([0]);
+  }
 }
+init();
 
 var baseResolution = 1;
 function resize() {
@@ -37,7 +36,7 @@ var resolution = 1;
 var scale = 1;
 var targetScale = 1;
 var max = 0; 
-var maxima = [];
+var maxima = [100];
 var minima = [];
 var zeros = [];
 var pois = [];
@@ -54,6 +53,7 @@ var target = {
   type: 'poi',
   completed: false
 };
+var phrases = ["+C","You try","Keep it real","IMAMI","English was just made up","I don't need a practical application","I am a petty man"];
 function updateTarget() {
   target.min = target.max + Math.round(Math.random() * 50);
   target.max = target.min + Math.round(Math.random() * 30 + 20);
@@ -64,14 +64,9 @@ function updateTarget() {
 }
 updateTarget();
 function update(delta) {
-  x+=delta*resolution;
   //Update values
   if(family.length > 1) {
     family[0].push(active ? swing : -swing);
-    //Check if target has expired
-    if(family[0].length > target.max) {
-      gameOver = true;
-    }
     var type = null;
     if(family[0][family[0].length - 1] !== family[0][family[0].length - 2]) {
       //Second derivative hit 0
@@ -104,6 +99,10 @@ function update(delta) {
           }
         }
       }
+      //Check if target has expired
+      if(family[0].length > target.max) {
+        gameOver = true;
+      }
       family[i].push(newVal);
     }
   }
@@ -124,13 +123,29 @@ function update(delta) {
     targetScale = 10;
   }
   //Move toward target scale
-  scale += (targetScale - scale)/10;
+  scale += (targetScale - scale)/25;
 
   //Scale horizontally as well
   resolution = baseResolution * scale;
 
 }
-
+var progress = 0;
+function restart(delta) {
+  if(active) {
+    progress += baseResolution * delta * 10;
+  }
+  if(progress > canvas.width) {
+    score = -1;
+    maxima = minima = zeros = pois = [];
+    targetScale = 1;
+    gameOver = false;
+    progress = 0;
+    target.display.min = 1000;
+    target.display.max = 1000;
+    init();
+    updateTarget();
+  }
+}
 function render() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.save();
@@ -168,6 +183,16 @@ function render() {
     ctx.stroke();
   }
   ctx.restore();
+  if(gameOver) {
+    ctx.fillStyle = "rgba(255,0,0,0.5)";
+    ctx.fillRect(progress,0,canvas.width-progress,canvas.height);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0,barHeight,progress,canvas.height-2*barHeight);
+    ctx.textAlign = "center";
+    ctx.font = Math.round(barHeight/2) + "px Impact, sans-serif";
+    ctx.fillStyle = "#fff";
+    ctx.fillText("\"" + phrases[Math.floor(progress/canvas.width*Math.min(phrases.length,score))] + "\"",canvas.width/2,canvas.height/2+barHeight/4);
+  }
 }
 var now = 0;
 var then = 0;
@@ -188,7 +213,7 @@ function loop() {
   if(!gameOver) {
     update((now - then)/targetStep);
   } else {
-    console.log("Game over");
+    restart((now - then)/targetStep);
   }
   render();
   window.requestAnimationFrame(loop);
